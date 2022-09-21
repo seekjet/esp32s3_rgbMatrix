@@ -31,15 +31,15 @@
 #define PIN_LAT GPIO_NUM_11
 #define PIN_CLK GPIO_NUM_5
 
-#define PANEL_FRAMERATE 60
-#define PANEL_NUM_ELECTRICAL_ROWS 8
-#define PANEL_ELECTRICAL_ROW_LENGTH 256 //top half of panel only, as we have two sets of rgb pins
-#define PLANE_SIZE (PANEL_NUM_ELECTRICAL_ROWS*PANEL_NUM_ELECTRICAL_ROWS)
-#define BUFFER_NUM_PLANES 4
+#define PANEL_FRAMERATE (60)
+#define PANEL_NUM_ELECTRICAL_ROWS (8)
+#define PANEL_ELECTRICAL_ROW_LENGTH (256) //top half of panel only, as we have two sets of rgb pins
+#define PLANE_SIZE (PANEL_NUM_ELECTRICAL_ROWS*PANEL_ELECTRICAL_ROW_LENGTH)
+#define BUFFER_NUM_PLANES (4)
 #define BUFFER_SIZE (BUFFER_NUM_PLANES*PLANE_SIZE)
 
-#define PANEL_PX_WIDTH 128
-#define PANEL_PX_HEIGHT 32
+#define PANEL_PX_WIDTH (128)
+#define PANEL_PX_HEIGHT (32)
 
 #define SPI_CLOCK_HZ (20 * 1000000) //20MHz
 #define SPI_CS_PIN 17
@@ -332,7 +332,7 @@ void generateTransfmormationLUTs() {
                 elecRow-=8;   
             }
             
-            transformPosLUT[offset] = (elecRow*PANEL_ELECTRICAL_ROW_LENGTH*BUFFER_NUM_PLANES)+elecCol;
+            transformPosLUT[offset] = (elecRow*PANEL_ELECTRICAL_ROW_LENGTH)+elecCol;
             shiftRtLUT[offset] = shiftRt;
         }
     }
