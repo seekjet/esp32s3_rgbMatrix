@@ -31,10 +31,12 @@
 #define PIN_LAT GPIO_NUM_11
 #define PIN_CLK GPIO_NUM_5
 
-#define BUFFER_NUM_PLANES 4
 #define PANEL_FRAMERATE 60
 #define PANEL_NUM_ELECTRICAL_ROWS 8
 #define PANEL_ELECTRICAL_ROW_LENGTH 256 //top half of panel only, as we have two sets of rgb pins
+#define PLANE_SIZE (PANEL_NUM_ELECTRICAL_ROWS*PANEL_NUM_ELECTRICAL_ROWS)
+#define BUFFER_NUM_PLANES 4
+#define BUFFER_SIZE (BUFFER_NUM_PLANES*PLANE_SIZE)
 
 #define PANEL_PX_WIDTH 128
 #define PANEL_PX_HEIGHT 32
@@ -103,8 +105,6 @@ struct
             };
             TaskHandle_t spi_tx_task = NULL;
         } spi;
-        uint8_t numElecRows = PANEL_NUM_ELECTRICAL_ROWS;
-        uint8_t numImgPlanes = BUFFER_NUM_PLANES;
         struct {
             timer_group_t group = TIMER_GROUP_0;
             timer_idx_t id = TIMER_0;
@@ -118,7 +118,6 @@ struct
             uint64_t initAlarmVal = 100;
         } timer;
         uint32_t frameRate = PANEL_FRAMERATE;
-        uint32_t bufferSize = PANEL_NUM_ELECTRICAL_ROWS*BUFFER_NUM_PLANES*PANEL_ELECTRICAL_ROW_LENGTH;
         uint8_t* buffer[2] = {NULL, NULL};
     } config;
     struct {
@@ -146,23 +145,24 @@ void spiTransmitTask(void* params) {
             spi_transaction_t trans = dev.config.spi.transactionPrototype;
 
             uint8_t newElecRow = dev.state.currentElecRow + 1, newImgPlane;
-            if (newElecRow == dev.config.numElecRows) {
+            if (newElecRow == PANEL_NUM_ELECTRICAL_ROWS) {
                 newElecRow = 0;
                 dev.state.firstElecRowLastDisplayedPlane++;
-                if (dev.state.firstElecRowLastDisplayedPlane == dev.config.numImgPlanes)
+                if (dev.state.firstElecRowLastDisplayedPlane == BUFFER_NUM_PLANES)
                     dev.state.firstElecRowLastDisplayedPlane = 0;
                 newImgPlane = dev.state.firstElecRowLastDisplayedPlane;
             }
             else {
                 newImgPlane = dev.state.currentImgPlane + 1;
-                if (newImgPlane == dev.config.numImgPlanes) 
+                if (newImgPlane == BUFFER_NUM_PLANES) 
                     newImgPlane = 0;
             }
             dev.state.nextElecRow = newElecRow;
             dev.state.nextImgPlane = newImgPlane;
             //set pointer offset
             trans.tx_buffer = dev.config.buffer[dev.state.activeBuffer]
-                + (((dev.state.nextElecRow * BUFFER_NUM_PLANES) + dev.state.nextImgPlane) * (PANEL_ELECTRICAL_ROW_LENGTH * sizeof(uint8_t)));
+                + (dev.state.nextImgPlane * PLANE_SIZE)
+                + (dev.state.nextElecRow * PANEL_ELECTRICAL_ROW_LENGTH);
 
             dev.state.numSpiTransactionsInflight++;
             esp_err_t err = spi_device_queue_trans(dev.config.spi.devHandle, &trans, 0);
@@ -248,18 +248,19 @@ void IRAM_ATTR spi_trans_cb(spi_transaction_t* trans) {
     //set trans flag to done
 }
 
+uint8_t* writeBuffer;
 void swapBuffers(bool copyBuffer) {
     uint8_t activeBuffer = dev.state.activeBuffer;
     writeBuffer = dev.config.buffer[activeBuffer];
     dev.state.activeBuffer = (activeBuffer+1)&1;
-    if (copyBuffer) memcpy(writeBuffer, dev.config.buffer[activeBuffer], dev.config.bufferSize);
+    if (copyBuffer) memcpy(writeBuffer, dev.config.buffer[activeBuffer], BUFFER_SIZE);
 }
 void generateTransfmormationLUTs();
 void initRgbPanel() {
     //alloc mem
-    ESP_LOGI(TAG, "allocating two buffers of size %d [%f KB]", dev.config.bufferSize, (float)dev.config.bufferSize/1024);
-    dev.config.buffer[0] = (uint8_t*)heap_caps_malloc(dev.config.bufferSize*sizeof(uint8_t), MALLOC_CAP_DMA);
-    dev.config.buffer[1] = (uint8_t*)heap_caps_malloc(dev.config.bufferSize*sizeof(uint8_t), MALLOC_CAP_DMA);
+    ESP_LOGI(TAG, "allocating two buffers of size %d [%f KB]", BUFFER_SIZE, (float)BUFFER_SIZE/1024);
+    dev.config.buffer[0] = (uint8_t*)heap_caps_malloc(BUFFER_SIZE*sizeof(uint8_t), MALLOC_CAP_DMA);
+    dev.config.buffer[1] = (uint8_t*)heap_caps_malloc(BUFFER_SIZE*sizeof(uint8_t), MALLOC_CAP_DMA);
 
     generateTransfmormationLUTs();
     if ((dev.config.buffer[0] == NULL) || (dev.config.buffer[1] == NULL)) ESP_LOGE(TAG, "Failed to allocate DMA buffers");
@@ -300,7 +301,7 @@ void initRgbPanel() {
 
 
 void clearBuffer() {
-    memset(writeBuffer, 0, dev.config.bufferSize);
+    memset(writeBuffer, 0, BUFFER_SIZE);
 }
 
 
@@ -340,7 +341,7 @@ void generateTransfmormationLUTs() {
 //use the transformation lookup tables
 inline void transformPos(int row, int col, int* ptrOffset, int* shiftRtBy) {
     const int offset = (row*PANEL_PX_WIDTH)+col;
-    *ptrOffset = transformPosLUT[(row*PANEL_PX_WIDTH)+col];
+    *ptrOffset = transformPosLUT[offset];
     *shiftRtBy = shiftRtLUT[offset];
 }
 
@@ -348,7 +349,7 @@ inline void transformPos(int row, int col, int* ptrOffset, int* shiftRtBy) {
 inline void writeByteIntoBuf(int ptrOffset, int plane, uint8_t byte, uint8_t bitMask) {
     uint8_t* ptr = writeBuffer
             + ptrOffset
-            + (PANEL_ELECTRICAL_ROW_LENGTH*plane);
+            + (PLANE_SIZE*plane);
     *ptr = ((*ptr) & (~bitMask)) | (byte & bitMask);
 }
 inline void rgb565ToPlaneBytes(uint16_t color, uint8_t* planeBytes) {
