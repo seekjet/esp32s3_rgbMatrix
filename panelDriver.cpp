@@ -12,24 +12,24 @@
 
 //A, B, C, D must be on.config.pins.<40
 
-#define PIN_R1 GPIO_NUM_1
-#define PIN_G1 GPIO_NUM_2
-#define PIN_B1 GPIO_NUM_4
-#define PIN_R2 GPIO_NUM_5
-#define PIN_G2 GPIO_NUM_6
-#define PIN_B2 GPIO_NUM_7
-#define EXTRA_SPI_DATAPIN_1 GPIO_NUM_8
-#define EXTRA_SPI_DATAPIN_2 GPIO_NUM_9
+#define PIN_R1 GPIO_NUM_18
+#define PIN_G1 GPIO_NUM_8
+#define PIN_B1 GPIO_NUM_17
+#define PIN_R2 GPIO_NUM_16
+#define PIN_G2 GPIO_NUM_19
+#define PIN_B2 GPIO_NUM_15
+#define EXTRA_SPI_DATAPIN_1 GPIO_NUM_3
+#define EXTRA_SPI_DATAPIN_2 GPIO_NUM_45
 #define NUM_DATA_PINS 6
-#define PIN_A GPIO_NUM_10
-#define PIN_B GPIO_NUM_11
-#define PIN_C GPIO_NUM_12
-#define PIN_D GPIO_NUM_13
-#define PIN_E GPIO_NUM_14
+#define PIN_A GPIO_NUM_7
+#define PIN_B GPIO_NUM_9
+#define PIN_C GPIO_NUM_6
+#define PIN_D GPIO_NUM_10
+#define PIN_E GPIO_NUM_20
 #define NUM_ROW_PINS 5
-#define PIN_OE GPIO_NUM_15
-#define PIN_LAT GPIO_NUM_16
-#define PIN_CLK GPIO_NUM_17
+#define PIN_OE GPIO_NUM_4
+#define PIN_LAT GPIO_NUM_11
+#define PIN_CLK GPIO_NUM_5
 
 #define BUFFER_NUM_PLANES 4
 #define PANEL_FRAMERATE 60
@@ -39,7 +39,7 @@
 #define PANEL_PX_WIDTH 128
 #define PANEL_PX_HEIGHT 32
 
-#define SPI_CLOCK_HZ (20 * 1000000) //20KHz
+#define SPI_CLOCK_HZ (20 * 1000000) //20MHz
 #define SPI_CS_PIN 17
 
     static inline __attribute__((always_inline)) 
@@ -248,8 +248,6 @@ void IRAM_ATTR spi_trans_cb(spi_transaction_t* trans) {
     //set trans flag to done
 }
 
-uint8_t* writeBuffer = NULL;
-uint32_t bufferSize = dev.config.bufferSize;
 void swapBuffers(bool copyBuffer) {
     uint8_t activeBuffer = dev.state.activeBuffer;
     writeBuffer = dev.config.buffer[activeBuffer];
