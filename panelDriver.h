@@ -38,5 +38,5 @@
 void initRgbPanel();
 void swapBuffers(bool copyBuffer);
 void clearBuffer();
-inline void drawPixel(int row, int col, uint16_t color);
+void drawPixel(int row, int col, uint16_t color);
 #endif

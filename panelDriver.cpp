@@ -7,6 +7,7 @@
 #include <driver/timer.h>
 #include <driver/spi_master.h>
 #include <cstring>
+#include "panelDriver.h"
 
 #define TAG "esp32s3_rgbMatrix"
 
