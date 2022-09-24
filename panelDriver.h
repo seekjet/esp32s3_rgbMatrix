@@ -33,8 +33,10 @@
 #define PANEL_PX_WIDTH (128)
 #define PANEL_PX_HEIGHT (32)
 
-#define SPI_CLOCK_HZ (20 * 1000000) //20MHz
-
+#define SPI_CLOCK_HZ (30 * 1000000) 
+//20MHz lower this if some pixels fail to light up or it looks like its having stability issues. 20MHz should definitely work for two panels
+//I started experiencing errors as 34MHz, so i've allowed ~10% margin by setting it to 30MHz
+//playing with the clock vs data line timing may also help get you higher clock speeds
 void initRgbPanel();
 void swapBuffers(bool copyBuffer);
 void clearBuffer();
