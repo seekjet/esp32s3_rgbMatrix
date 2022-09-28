@@ -286,20 +286,15 @@ void generateTransfmormationLUTs() {
             const uint32_t offset = (i*PANEL_PX_WIDTH)+j;
             int shiftRt = 0;
             int elecRow = i;
+            int elecCol = j;
+            while (elecRow >= 32) {
+                elecCol += 256;
+                elecRow -= 32;
+            }
             if (elecRow >= 16) {
                 shiftRt = 3;
                 elecRow -=16;
             }
-
-            int elecCol = j + 64;
-            if (elecCol >= 128) {
-                elecCol += 64;
-            }
-            if (elecRow >= 8) {
-                elecCol -= 64;
-                elecRow-=8;   
-            }
-            
             transformPosLUT[offset] = (elecRow*PANEL_ELECTRICAL_ROW_LENGTH)+elecCol;
             shiftRtLUT[offset] = shiftRt;
         }
@@ -332,6 +327,19 @@ inline void rgb565ToPlaneBytes(uint16_t color, uint8_t* planeBytes) {
     }
 }
 
+void drawPixelElectricalPos(int row, int col, uint16_t color) {
+
+    if ((row < 0) | (col < 0) | (row >= PANEL_NUM_ELECTRICAL_ROWS) | (col >= PANEL_ELECTRICAL_ROW_LENGTH)) return; //invalid loc
+    int ptrOffset, shiftRt=0;
+    ptrOffset = (row*PANEL_ELECTRICAL_ROW_LENGTH)+col;
+    //buffers are filled lsb to msb
+    //align red green blue to positions
+    uint8_t planeBytes[BUFFER_NUM_PLANES] = {0};
+    rgb565ToPlaneBytes(color, planeBytes);
+    for (int i = 0; i < BUFFER_NUM_PLANES; i++) {
+        writeByteIntoBuf(ptrOffset, i, planeBytes[i]>>shiftRt, 0b11100000>>shiftRt);
+    }
+}
 void drawPixel(int row, int col, uint16_t color) {
 
     if ((row < 0) | (col < 0) | (row >= PANEL_PX_HEIGHT) | (col >= PANEL_PX_WIDTH)) return; //invalid loc
@@ -339,7 +347,7 @@ void drawPixel(int row, int col, uint16_t color) {
     transformPos(row, col, &ptrOffset, &shiftRt);
     //buffers are filled lsb to msb
     //align red green blue to positions
-    uint8_t planeBytes[BUFFER_NUM_PLANES];
+    uint8_t planeBytes[BUFFER_NUM_PLANES] = {0};
     rgb565ToPlaneBytes(color, planeBytes);
     for (int i = 0; i < BUFFER_NUM_PLANES; i++) {
         writeByteIntoBuf(ptrOffset, i, planeBytes[i]>>shiftRt, 0b11100000>>shiftRt);
