@@ -25,13 +25,13 @@
 
 #define PANEL_FRAMERATE (30)
 #define PANEL_NUM_ELECTRICAL_ROWS (16)
-#define PANEL_ELECTRICAL_ROW_LENGTH (768) //top half of panel only, as we have two sets of rgb pins
+#define PANEL_ELECTRICAL_ROW_LENGTH (1024) //top half of panel only, as we have two sets of rgb pins
 #define PLANE_SIZE (PANEL_NUM_ELECTRICAL_ROWS*PANEL_ELECTRICAL_ROW_LENGTH)
 #define BUFFER_NUM_PLANES (4)
 #define BUFFER_SIZE (BUFFER_NUM_PLANES*PLANE_SIZE)
 
 #define PANEL_PX_WIDTH (256)
-#define PANEL_PX_HEIGHT (96)
+#define PANEL_PX_HEIGHT (128)
 
 #define SPI_CLOCK_HZ (20 * 1000000) 
 //20MHz lower this if some pixels fail to light up or it looks like its having stability issues. 20MHz should definitely work for two panels
