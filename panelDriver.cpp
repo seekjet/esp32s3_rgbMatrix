@@ -281,23 +281,36 @@ static uint8_t* shiftRtLUT = NULL;
 void generateTransfmormationLUTs() {
     transformPosLUT = (uint16_t*)malloc(PANEL_PX_WIDTH*PANEL_PX_HEIGHT*sizeof(uint16_t));
     shiftRtLUT = (uint8_t*)malloc(PANEL_PX_WIDTH*PANEL_PX_HEIGHT*sizeof(uint8_t));
+    uint32_t index = 64;
+    uint32_t countA = 0;
+    uint32_t countB = 0;
+    uint32_t countC = 0;
+    uint32_t offset = 0;
+    int shiftRt = 0;
     for (int i = 0; i < PANEL_PX_HEIGHT; i++) {
         for (int j = 0; j < PANEL_PX_WIDTH; j++) {
-            const uint32_t offset = (i*PANEL_PX_WIDTH)+j;
-            int shiftRt = 0;
-            int elecRow = i;
-            int elecCol = j;
-            while (elecRow >= 32) {
-                elecCol += 256;
-                elecRow -= 32;
+            if (countA == 64) {
+                index+=64;
+                countA = 0;
             }
-            if (elecRow >= 16) {
+            if (countB == 1024) {
+                index = 0;
+                countB = 0;
+            }
+            if (countC == 2048) {
+                index = 64;
                 shiftRt = 3;
-                elecRow -=16;
+                countC = 0;
             }
-            transformPosLUT[offset] = (elecRow*PANEL_ELECTRICAL_ROW_LENGTH)+elecCol;
+            transformPosLUT[offset] = index;
             shiftRtLUT[offset] = shiftRt;
+            offset++;
+            index++;
+            countA++;
+            countB++;
+            countC++;
         }
+
     }
 }
 
@@ -311,8 +324,8 @@ inline void transformPos(int row, int col, int* ptrOffset, int* shiftRtBy) {
 
 inline void writeByteIntoBuf(int ptrOffset, int plane, uint8_t byte, uint8_t bitMask) {
     uint8_t* ptr = writeBuffer
-            + ptrOffset
-            + (PLANE_SIZE*plane);
+        + ptrOffset
+        + (PLANE_SIZE*plane);
     *ptr = ((*ptr) & (~bitMask)) | (byte & bitMask);
 }
 inline void rgb565ToPlaneBytes(uint16_t color, uint8_t* planeBytes) {
@@ -340,8 +353,8 @@ void drawPixelElectricalPos(int row, int col, uint16_t color) {
         writeByteIntoBuf(ptrOffset, i, planeBytes[i]>>shiftRt, 0b11100000>>shiftRt);
     }
 }
-void drawPixel(int row, int col, uint16_t color) {
 
+void drawPixel(int row, int col, uint16_t color) {
     if ((row < 0) | (col < 0) | (row >= PANEL_PX_HEIGHT) | (col >= PANEL_PX_WIDTH)) return; //invalid loc
     int ptrOffset, shiftRt;
     transformPos(row, col, &ptrOffset, &shiftRt);
@@ -352,4 +365,18 @@ void drawPixel(int row, int col, uint16_t color) {
     for (int i = 0; i < BUFFER_NUM_PLANES; i++) {
         writeByteIntoBuf(ptrOffset, i, planeBytes[i]>>shiftRt, 0b11100000>>shiftRt);
     }
+}
+
+void drawPixel(int row, int col, uint8_t r, uint8_t g, uint8_t b) {
+    uint16_t color = ((uint16_t)r<<8) & 0b1111100000000000;
+    color |= ((uint16_t)g<<3) & 0b0000011111100000;
+    color |= ((uint16_t)b>>3) & 0b0000000000011111;
+    drawPixel(row, col, color);
+}
+
+void drawPixel(int row, int col, uint16_t r, uint16_t g, uint16_t b) {
+    uint16_t color = r & 0b1111100000000000;
+    color |= (g>>5) & 0b0000011111100000;
+    color |= (b>>11) & 0b0000000000011111;
+    drawPixel(row, col, color);
 }
